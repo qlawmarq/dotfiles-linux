@@ -1,0 +1,21 @@
+# System libraries
+build-essential
+git
+curl
+wget
+
+# Development tools
+tmux
+
+# CLI utilities
+ripgrep
+fd-find
+bat
+jq
+fzf
+tree
+htop
+
+# Clipboard utilities (for git SSH key copy)
+xclip
+wl-clipboard

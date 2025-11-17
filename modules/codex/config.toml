@@ -1,0 +1,42 @@
+model = "gpt-5-codex"
+model_reasoning_effort = "medium"
+hide_agent_reasoning = true
+sandbox_mode = "danger-full-access"
+file_opener = "vscode"
+notify = ["bash","-lc","afplay /System/Library/Sounds/Ping.aiff"]
+
+# Run `codex --profile azure-openai`
+[profiles.azure-openai]
+model_provider = "azure"
+model = "gpt-5"
+model_reasoning_effort = "high"
+hide_agent_reasoning = true
+sandbox_mode = "danger-full-access"
+
+[model_providers.azure]
+name = "Azure"
+# Make sure you set the appropriate subdomain for this URL.
+base_url = "https://YOUR_PROJECT_NAME.openai.azure.com/openai"
+# If `env_key` is set, identifies an environment variable that must be set when
+# using Codex with this provider. The value of the environment variable must be
+# non-empty and will be used in the `Bearer TOKEN` HTTP header for the POST request.
+env_key = "AZURE_OPENAI_API_KEY"
+query_params = { api-version = "2025-04-01-preview" }
+# Valid values for wire_api are "chat" and "responses". Defaults to "chat" if omitted.
+wire_api = "responses"
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp@latest"]
+
+[mcp_servers.fetch]
+command = "uvx"
+args = ["--native-tls", "mcp-server-fetch"]
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "@playwright/mcp"]
+
+[tools]
+# Hosted tool `web_search` is not supported with current Azure OpenAI
+# web_search = true

@@ -1,0 +1,10 @@
+# Module dependencies definition
+# Format: module: dependency1 dependency2 ...
+
+packages:
+mise: packages
+git:
+dotfiles: git
+codex: mise dotfiles
+vscode: packages
+claude-code: mise

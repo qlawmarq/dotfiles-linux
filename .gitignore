@@ -1,0 +1,10 @@
+.DS_Store
+.idea/
+*.iml
+*.pem
+*.zip
+
+# Environment secrets (API keys, tokens, etc.)
+.env_secrets
+*/.env_secrets
+**/.env_secrets
