@@ -40,4 +40,4 @@
 	last 	= log -1 HEAD --stat
 
 	# Delete branches except main and master in local
-	delete-br = "!f() { branches=$(git branch | grep -v -E \"(main|master)\"); if [ -n \"$branches\" ]; then echo \"Target:\"; echo \"$branches\"; read -p \"Are you sure (y/N): \" -n 1 -r; echo; [[ $REPLY =~ ^[Yy]$ ]] && echo \"$branches\" | xargs git branch -D; else echo \"No target found.\"; fi; }; f"
+	delete-br = "!f() { branches=$(git branch | grep -v -E \"(main|master)\"); if [ -n \"$branches\" ]; then echo \"Target:\"; echo \"$branches\"; printf \"Are you sure (y/N): \"; read -r reply; case $reply in [Yy]*) echo \"$branches\" | xargs git branch -D ;; esac; else echo \"No target found.\"; fi; }; f"
