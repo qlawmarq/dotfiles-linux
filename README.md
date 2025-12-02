@@ -13,12 +13,21 @@ Linux/WSL development environment setup scripts.
 ## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/qlawmarq/dotfiles-linux.git
+# Clone with submodules (includes shared configurations)
+git clone --recurse-submodules https://github.com/qlawmarq/dotfiles-linux.git
 cd dotfiles-linux
 bash apply.sh
 ```
 
 > ⚠️ **Important**: Always use `bash` to execute scripts, not `sh`. Using `sh` may invoke a POSIX shell (like `dash`) that doesn't support Bash-specific syntax.
+
+### First Time Setup
+
+If you cloned without `--recurse-submodules`, initialize the submodule:
+
+```bash
+git submodule update --init --recursive
+```
 
 ## 📦 Package Management Strategy
 
@@ -41,15 +50,27 @@ Layer 2: mise (Runtime Version Management)
 
 ## 🔧 Modules
 
+### Shared Configurations (via common submodule)
+
+Common configurations are managed in [dotfiles-common](https://github.com/qlawmarq/dotfiles-common) and shared with [dotfiles-macos](https://github.com/qlawmarq/dotfiles-macos):
+
+| Module          | Description                                        |
+| --------------- | -------------------------------------------------- |
+| **common/tmux** | Cross-platform tmux configuration                  |
+| **common/claude** | Claude Code settings (agents, commands, skills, tools) |
+
+### Platform-Specific Modules
+
 | Module          | Description                                   |
 | --------------- | --------------------------------------------- |
 | **packages**    | System package manager abstraction            |
 | **mise**        | Runtime version management (node, python, go) |
-| **dotfiles**    | Shell configurations (.zshrc, .tmux.conf)     |
+| **tmux**        | tmux setup (uses common/tmux)                 |
+| **dotfiles**    | Shell configurations (.bashrc, .profile)      |
 | **git**         | Git configuration + SSH key setup             |
 | **codex**       | Codex CLI                                     |
 | **vscode**      | VS Code settings and extensions               |
-| **claude-code** | Claude Code CLI configuration                 |
+| **claude-code** | Claude Code CLI setup (uses common/claude)    |
 
 ## 🔄 Backup
 
