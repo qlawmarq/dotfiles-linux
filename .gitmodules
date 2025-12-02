@@ -1,0 +1,4 @@
+[submodule "modules/common"]
+	path = modules/common
+	url = git@github.com:/qlawmarq/dotfiles-common.git
+	branch = main
