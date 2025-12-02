@@ -12,22 +12,20 @@ fi
 
 check_linux
 
-print_info "Backing up dotfiles..."
+print_info "Backing up shell configuration..."
 
-# .profile
-if [ -f ~/.profile ]; then
-    cp ~/.profile "${SCRIPT_DIR}/.profile"
-    echo "✓ .profile synced"
+# Backup .bashrc
+if [ -f "$HOME/.bashrc" ]; then
+    cp "$HOME/.bashrc" "$SCRIPT_DIR/.bashrc"
+    print_success ".bashrc backed up"
 fi
 
-# .bashrc
-if [ -f ~/.bashrc ]; then
-    cp ~/.bashrc "${SCRIPT_DIR}/.bashrc"
-    echo "✓ .bashrc synced"
+# Backup .profile
+if [ -f "$HOME/.profile" ]; then
+    cp "$HOME/.profile" "$SCRIPT_DIR/.profile"
+    print_success ".profile backed up"
 fi
 
-# .tmux.conf
-if [ -f ~/.tmux.conf ]; then
-    cp ~/.tmux.conf "${SCRIPT_DIR}/.tmux.conf"
-    echo "✓ .tmux.conf synced"
-fi
+print_success "Shell configuration backup completed"
+print_info ""
+print_info "Note: tmux configuration is now managed by the 'tmux' module"

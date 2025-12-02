@@ -12,26 +12,28 @@ fi
 
 check_linux
 
-print_info "Setting up dotfiles..."
-echo "======================"
+print_info "Shell Configuration Setup"
+echo "========================="
 
-# Setup .profile (loaded for login shells including SSH)
-if [ -f "${SCRIPT_DIR}/.profile" ]; then
-    cp "${SCRIPT_DIR}/.profile" ~/.profile
-    print_success ".profile applied"
+# Backup and install .bashrc
+if [ -f "$HOME/.bashrc" ]; then
+    backup="$HOME/.bashrc.$(date +%Y%m%d%H%M%S).bak"
+    mv "$HOME/.bashrc" "$backup"
+    print_info "Existing .bashrc backed up to $backup"
 fi
+cp "$SCRIPT_DIR/.bashrc" "$HOME/.bashrc"
+print_success ".bashrc applied"
 
-# Setup .bashrc
-if [ -f "${SCRIPT_DIR}/.bashrc" ]; then
-    cp "${SCRIPT_DIR}/.bashrc" ~/.bashrc
-    print_success ".bashrc applied"
+# Backup and install .profile
+if [ -f "$HOME/.profile" ]; then
+    backup="$HOME/.profile.$(date +%Y%m%d%H%M%S).bak"
+    mv "$HOME/.profile" "$backup"
+    print_info "Existing .profile backed up to $backup"
 fi
+cp "$SCRIPT_DIR/.profile" "$HOME/.profile"
+print_success ".profile applied"
 
-# Setup .tmux.conf
-if [ -f "${SCRIPT_DIR}/.tmux.conf" ]; then
-    cp "${SCRIPT_DIR}/.tmux.conf" ~/.tmux.conf
-    print_success "tmux configuration applied"
-fi
-
-print_success "Dotfiles applied successfully"
+print_success "Shell configuration completed"
+print_info ""
+print_info "Note: tmux configuration is now managed by the 'tmux' module"
 print_info "Restart your shell or run: source ~/.bashrc"

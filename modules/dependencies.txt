@@ -4,7 +4,8 @@
 packages:
 mise: packages
 git:
-dotfiles: git
+tmux:
+dotfiles: git tmux
 codex: mise dotfiles
 vscode: packages
 claude-code: mise
