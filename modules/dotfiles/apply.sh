@@ -15,21 +15,9 @@ check_linux
 print_info "Shell Configuration Setup"
 echo "========================="
 
-# Backup and install .bashrc
-if [ -f "$HOME/.bashrc" ]; then
-    backup="$HOME/.bashrc.$(date +%Y%m%d%H%M%S).bak"
-    mv "$HOME/.bashrc" "$backup"
-    print_info "Existing .bashrc backed up to $backup"
-fi
 cp "$SCRIPT_DIR/.bashrc" "$HOME/.bashrc"
 print_success ".bashrc applied"
 
-# Backup and install .profile
-if [ -f "$HOME/.profile" ]; then
-    backup="$HOME/.profile.$(date +%Y%m%d%H%M%S).bak"
-    mv "$HOME/.profile" "$backup"
-    print_info "Existing .profile backed up to $backup"
-fi
 cp "$SCRIPT_DIR/.profile" "$HOME/.profile"
 print_success ".profile applied"
 

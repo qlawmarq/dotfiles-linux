@@ -41,12 +41,6 @@ if confirm "Would you like to install @anthropic-ai/claude-code?"; then
 
     # Deploy settings.json from common
     if [ -f "$COMMON_DIR/claude/settings.json" ]; then
-        if [ -f "$CLAUDE_CODE_DIR/settings.json" ]; then
-            backup="$CLAUDE_CODE_DIR/settings.json.$(date +%Y%m%d%H%M%S).bak"
-            cp "$CLAUDE_CODE_DIR/settings.json" "$backup"
-            print_info "Existing settings backed up to $backup"
-        fi
-
         cp "$COMMON_DIR/claude/settings.json" "$CLAUDE_CODE_DIR/settings.json"
         print_success "Claude Code settings applied from common"
     fi
@@ -54,17 +48,31 @@ if confirm "Would you like to install @anthropic-ai/claude-code?"; then
     # Deploy resources from common
     print_info "Deploying Claude Code resources from common..."
 
+    # Ask if user wants to clean up old files
+    CLEANUP_MODE=false
+    if confirm "Would you like to clean up old files before deploying? (removes all existing files in each resource directory)"; then
+        CLEANUP_MODE=true
+        print_warning "Cleanup mode enabled - old files will be removed"
+    fi
+
     for resource_type in agents commands skills tools; do
         resource_dir="$COMMON_DIR/claude/$resource_type"
 
         if [ -d "$resource_dir" ]; then
             print_info "Deploying $resource_type..."
+
+            # Clean up if requested
+            if [ "$CLEANUP_MODE" = true ] && [ -d "$CLAUDE_CODE_DIR/$resource_type" ]; then
+                print_warning "Removing old $resource_type..."
+                rm -rf "$CLAUDE_CODE_DIR/$resource_type"
+            fi
+
             mkdir -p "$CLAUDE_CODE_DIR/$resource_type"
 
             if cp -r "$resource_dir"/* "$CLAUDE_CODE_DIR/$resource_type/" 2>/dev/null; then
-                # Set execute permissions for tools
-                if [ "$resource_type" = "tools" ]; then
-                    find "$CLAUDE_CODE_DIR/$resource_type" -type f \( -name "*.sh" -o -name "*.py" \) -exec chmod +x {} \; 2>/dev/null
+                # Set execute permissions for tools and skills
+                if [ "$resource_type" = "tools" ] || [ "$resource_type" = "skills" ]; then
+                    find "$CLAUDE_CODE_DIR/$resource_type" -type f \( -name "*.sh" -o -name "*.py" \) -exec chmod +x {} \; 2>/dev/null || true
                 fi
 
                 print_success "$resource_type deployed"
