@@ -18,13 +18,6 @@ if [ ! -f "$COMMON_DIR/tmux/.tmux.conf" ]; then
     exit 1
 fi
 
-# Backup existing config
-if [ -f "$HOME/.tmux.conf" ]; then
-    backup="$HOME/.tmux.conf.$(date +%Y%m%d%H%M%S).bak"
-    mv "$HOME/.tmux.conf" "$backup"
-    print_info "Existing .tmux.conf backed up to $backup"
-fi
-
 # Deploy from common
 cp "$COMMON_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf"
 print_success "tmux configuration applied from common repository"
