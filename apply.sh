@@ -55,6 +55,9 @@ MODULES_DIR="$SCRIPT_DIR/modules"
 # Enumerate subdirectories in modules directory
 for dir in "$MODULES_DIR"/*; do
     [ -d "$dir" ] || continue
+    # Only directories that can actually be applied. Without this the
+    # `common` git submodule shows up in the menu and reports "missing".
+    [ -f "$dir/apply.sh" ] || continue
     module_name="$(basename "$dir")"
     MODULES+=("$module_name")
 done

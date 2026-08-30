@@ -1,49 +1,104 @@
 #!/bin/bash
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# ============================================================
+# Claude Code configuration backup - step dispatcher (Linux)
+#
+# Usage:
+#   bash backup.sh              # interactive step menu (TTY) / all steps
+#   bash backup.sh mcp          # single step
+#   CLAUDE_BACKUP_STEPS="mcp" bash backup.sh
+#
+# Writes live configuration back into the repository:
+#   mcp      -> modules/claude/mcp-servers.json
+#   settings -> modules/common/claude/settings.json  (SUBMODULE)
+# ============================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 COMMON_DIR="$DOTFILES_DIR/modules/common"
 
-. "$DOTFILES_DIR/lib/utils.sh"
+if [ -f "$DOTFILES_DIR/lib/utils.sh" ]; then
+    . "$DOTFILES_DIR/lib/utils.sh"
+else
+    echo "Error: utils.sh not found at $DOTFILES_DIR/lib/utils.sh" >&2
+    exit 1
+fi
 
 check_linux
 
-print_info "Backing up Claude Code configuration to common"
-echo "==============================================="
+if [ -f "$DOTFILES_DIR/lib/menu.sh" ]; then
+    . "$DOTFILES_DIR/lib/menu.sh"
+fi
 
-CLAUDE_CODE_DIR="$HOME/.claude"
+. "$SCRIPT_DIR/lib.sh"
 
-# Check if Claude Code directory exists
-if [ ! -d "$CLAUDE_CODE_DIR" ]; then
-    print_warning "Claude Code directory not found at $CLAUDE_CODE_DIR"
+CLAUDE_DIR="$HOME/.claude"
+
+ALL_STEPS="mcp settings"
+
+STEPS="$*"
+[ -z "$STEPS" ] && STEPS="${CLAUDE_BACKUP_STEPS:-}"
+
+if [ -z "$STEPS" ]; then
+    if [ -t 0 ]; then
+        smart_select_items "Select what to back up" $ALL_STEPS
+        STEPS="$SELECTED_ITEMS"
+    else
+        STEPS="$ALL_STEPS"
+    fi
+fi
+
+[ "$STEPS" = "all" ] && STEPS="$ALL_STEPS"
+
+if [ -z "$STEPS" ]; then
+    print_warning "Nothing selected"
     exit 0
 fi
 
-# Backup settings.json
-if [ -f "$CLAUDE_CODE_DIR/settings.json" ]; then
-    cp "$CLAUDE_CODE_DIR/settings.json" "$COMMON_DIR/claude/settings.json"
-    print_success "settings.json backed up"
-fi
-
-# Backup resources
-for resource_type in agents commands skills tools; do
-    if [ -d "$CLAUDE_CODE_DIR/$resource_type" ]; then
-        print_info "Backing up $resource_type..."
-        mkdir -p "$COMMON_DIR/claude/$resource_type"
-        cp -r "$CLAUDE_CODE_DIR/$resource_type"/* "$COMMON_DIR/claude/$resource_type/" 2>/dev/null
-        print_success "$resource_type backed up"
-    fi
+for s in $STEPS; do
+    case " $ALL_STEPS " in
+        *" $s "*) ;;
+        *)
+            print_error "Unknown step: $s"
+            print_info "Valid steps: $ALL_STEPS"
+            exit 1
+            ;;
+    esac
 done
 
-# Backup common hooks only (not platform-specific)
-if [ -f "$CLAUDE_CODE_DIR/hooks/auto-approve-safe-commands.sh" ]; then
-    cp "$CLAUDE_CODE_DIR/hooks/auto-approve-safe-commands.sh" "$COMMON_DIR/claude/hooks/"
-    print_success "Common hooks backed up"
+RUN=""
+for s in $ALL_STEPS; do
+    case " $STEPS " in
+        *" $s "*) RUN="$RUN $s" ;;
+    esac
+done
+
+print_info "Backing up Claude Code configuration"
+echo "====================================="
+print_info "Steps:$RUN"
+echo ""
+
+COMMON_TOUCHED=false
+FAILED=""
+for s in $RUN; do
+    print_info "--- step: $s ---"
+    if ! ( . "$SCRIPT_DIR/backup-steps/$s.sh" ); then
+        FAILED="$FAILED $s"
+    fi
+    [ "$s" = "settings" ] && COMMON_TOUCHED=true
+    echo ""
+done
+
+if [ "$COMMON_TOUCHED" = true ]; then
+    print_warning "modules/common (submodule) was modified. Commit it there first:"
+    echo "  git -C modules/common add -A && git -C modules/common commit && git -C modules/common push"
+    echo "  git add modules/common && git commit -m 'chore: bump common'"
+fi
+
+if [ -n "$FAILED" ]; then
+    print_error "Failed steps:$FAILED"
+    exit 1
 fi
 
 print_success "Backup completed"
-print_warning "Remember to commit and push changes in common submodule:"
-print_info "  cd $COMMON_DIR"
-print_info "  git add claude/"
-print_info "  git commit -m 'Update Claude Code configuration'"
-print_info "  git push"
+exit 0

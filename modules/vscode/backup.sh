@@ -21,8 +21,8 @@ if [ ! -d "$VSCODE_CONFIG_DIR" ]; then
     exit 0
 fi
 
-BACKUP_DIR="$SCRIPT_DIR/backup.$(date +%Y%m%d%H%M%S)"
-mkdir -p "$BACKUP_DIR"
+# Write to the paths apply.sh actually reads. The previous timestamped
+# backup.<date>/ directory was never consumed by anything.
 
 # Backup settings.json
 if [ -f "$VSCODE_CONFIG_DIR/settings.json" ]; then
@@ -42,7 +42,7 @@ if [ -f "$VSCODE_CONFIG_DIR/settings.json" ]; then
     > "$TMP_CONFIG"
 
     if [ -s "$TMP_CONFIG" ]; then
-        cp "$TMP_CONFIG" "$BACKUP_DIR/settings.json"
+        cp "$TMP_CONFIG" "$SCRIPT_DIR/settings.json"
         print_info "Backed up settings.json"
     fi
     rm -f "$TMP_CONFIG"
@@ -50,8 +50,8 @@ fi
 
 # Export installed extensions
 if command_exists code; then
-    code --list-extensions | sort > "$BACKUP_DIR/extensions.txt"
+    code --list-extensions | sort > "$SCRIPT_DIR/vscode-extensions.txt"
     print_info "Backed up extension list"
 fi
 
-print_success "VS Code configuration backed up to $BACKUP_DIR"
+print_success "VS Code configuration backed up to $SCRIPT_DIR"

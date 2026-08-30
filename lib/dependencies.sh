@@ -80,6 +80,7 @@ is_visited() {
 # Usage: resolve_dependencies "selected_modules"
 resolve_dependencies() {
     local selected="$1"
+    local module
     local result=""
     local visited="|"  # Use |module| format to ensure exact matches
     local temp_mark="|"

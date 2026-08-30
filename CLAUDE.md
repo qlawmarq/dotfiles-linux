@@ -45,7 +45,8 @@ The repository uses a modular architecture with 7 independent modules:
 - **git**: Git configuration with clipboard utilities
 - **codex**: Codex CLI
 - **vscode**: VS Code with Linux paths (`~/.config/Code/User/`)
-- **claude-code**: Claude Code CLI (Desktop features excluded)
+- **claude-code**: Claude Code setup (CLI, settings, hooks, skills, MCP). Step-based:
+  `bash modules/claude-code/apply.sh skills` updates skills without reinstalling the CLI
 
 Module dependencies are defined in `modules/dependencies.txt`.
 

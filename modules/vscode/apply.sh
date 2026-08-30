@@ -68,9 +68,23 @@ print_success "VS Code settings applied"
 # Install extensions
 if [ -f "${SCRIPT_DIR}/vscode-extensions.txt" ]; then
     print_info "Installing VS Code extensions..."
-    while IFS= read -r extension; do
-        code --install-extension "$extension"
+    # Read the list first: `code` inherits the loop's stdin and drains the
+    # redirect, so installing inside the `while read` loop stops after one.
+    extensions=()
+    while IFS= read -r line; do
+        # Skip empty lines and comments
+        if [ -n "$line" ] && [[ ! "$line" =~ ^# ]]; then
+            extensions+=("$line")
+        fi
     done < "${SCRIPT_DIR}/vscode-extensions.txt"
+
+    for extension in "${extensions[@]}"; do
+        if code --install-extension "$extension" < /dev/null; then
+            print_success "Installed: $extension"
+        else
+            print_warning "Failed to install: $extension"
+        fi
+    done
     print_success "VS Code extensions installed"
 fi
 

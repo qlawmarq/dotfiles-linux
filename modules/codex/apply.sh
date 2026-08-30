@@ -76,27 +76,6 @@ if command_exists "mise"; then
     fi
 fi
 
-# Function to get user input with default value
-get_user_input() {
-    local prompt="$1"
-    local default="$2"
-    local input
-    
-    if [ -n "$default" ]; then
-        read -p "$prompt [$default]: " input
-        echo "${input:-$default}"
-    else
-        while true; do
-            read -p "$prompt: " input
-            if [ -n "$input" ]; then
-                echo "$input"
-                break
-            fi
-            echo "This field cannot be empty. Please try again."
-        done
-    fi
-}
-
 # Try to get existing values from current config file if it exists
 EXISTING_CONFIG="$CODEX_CONFIG_DIR/config.toml"
 CURRENT_API_KEY=""
@@ -125,7 +104,7 @@ if [ -n "$CURRENT_API_KEY" ]; then
     AZURE_API_KEY="$CURRENT_API_KEY"
 else
     print_info "Azure OpenAI configuration needed"
-    AZURE_API_KEY=$(get_user_input "Enter your Azure OpenAI API Key (or press Enter to skip)" "")
+    AZURE_API_KEY=$(get_user_input "Enter your Azure OpenAI API Key (or press Enter to skip)" "" optional)
 fi
 
 # Get Azure base URL (project name)
@@ -135,7 +114,11 @@ else
     PROJECT_NAME=""
 fi
 
-AZURE_PROJECT_NAME=$(get_user_input "Enter your Azure OpenAI project name" "$PROJECT_NAME")
+if [ -n "$AZURE_API_KEY" ]; then
+    AZURE_PROJECT_NAME=$(get_user_input "Enter your Azure OpenAI project name" "$PROJECT_NAME")
+else
+    AZURE_PROJECT_NAME="$PROJECT_NAME"
+fi
 
 # Construct the full base URL
 AZURE_BASE_URL="https://${AZURE_PROJECT_NAME}.openai.azure.com/openai"
@@ -163,8 +146,12 @@ if [ -n "$AZURE_API_KEY" ]; then
     
     # Create or update .env_secrets file
     if [ -f "$ENV_SECRETS_FILE" ]; then
-        # Remove existing AZURE_OPENAI_API_KEY line if it exists
+        # Remove existing AZURE_OPENAI_API_KEY line if it exists.
+        # The temp file is created with the umask default and `mv` keeps the
+        # source mode, so restore 0600 explicitly - otherwise a re-run leaves
+        # the key world-readable.
         grep -v "^export AZURE_OPENAI_API_KEY=" "$ENV_SECRETS_FILE" > "${ENV_SECRETS_FILE}.tmp" 2>/dev/null || true
+        chmod 600 "${ENV_SECRETS_FILE}.tmp"
         mv "${ENV_SECRETS_FILE}.tmp" "$ENV_SECRETS_FILE"
     else
         # Create new file with proper permissions (readable only by user)
@@ -183,6 +170,7 @@ EOF
     
     # Add the Azure API key
     echo "export AZURE_OPENAI_API_KEY=\"$AZURE_API_KEY\"" >> "$ENV_SECRETS_FILE"
+    chmod 600 "$ENV_SECRETS_FILE"
     
     print_success "Azure API key saved to ~/.env_secrets (automatically loaded in new shell sessions)"
 fi

@@ -27,27 +27,6 @@ else
     CURRENT_NAME=""
 fi
 
-# Function to get user input with default value
-get_user_input() {
-    local prompt="$1"
-    local default="$2"
-    local input
-
-    if [ -n "$default" ]; then
-        read -p "$prompt [$default]: " input
-        echo "${input:-$default}"
-    else
-        while true; do
-            read -p "$prompt: " input
-            if [ -n "$input" ]; then
-                echo "$input"
-                break
-            fi
-            echo "This field cannot be empty. Please try again."
-        done
-    fi
-}
-
 # Get git user information
 GIT_EMAIL=$(get_user_input "Enter your Git email" "$CURRENT_EMAIL")
 GIT_NAME=$(get_user_input "Enter your Git name" "$CURRENT_NAME")

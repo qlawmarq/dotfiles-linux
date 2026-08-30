@@ -57,7 +57,7 @@ Common configurations are managed in [dotfiles-common](https://github.com/qlawma
 | Module          | Description                                        |
 | --------------- | -------------------------------------------------- |
 | **common/tmux** | Cross-platform tmux configuration                  |
-| **common/claude** | Claude Code settings (agents, commands, skills, tools) |
+| **common/claude** | Claude Code settings, hooks and Claude-only skills |
 
 ### Platform-Specific Modules
 
@@ -70,7 +70,7 @@ Common configurations are managed in [dotfiles-common](https://github.com/qlawma
 | **git**         | Git configuration + SSH key setup             |
 | **codex**       | Codex CLI                                     |
 | **vscode**      | VS Code settings and extensions               |
-| **claude-code** | Claude Code CLI setup (uses common/claude)    |
+| **claude-code** | Claude Code setup: CLI, settings, hooks, skills, MCP (uses common/claude) |
 
 ## 🔄 Backup
 

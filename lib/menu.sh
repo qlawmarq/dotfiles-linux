@@ -11,6 +11,7 @@ yn_select_items() {
     local header="$1"
     shift
     local items=("$@")
+    local item yn
     
     echo "$header"
     echo "----------------------------------------"
@@ -63,7 +64,19 @@ tui_multi_select() {
     
     # Save terminal settings
     local old_stty=$(stty -g)
-    
+
+    # SELECTED_ITEMS is a global that is only assigned on the normal path.
+    # Clear it up front so an interrupted menu can never hand the caller the
+    # PREVIOUS menu's answer.
+    SELECTED_ITEMS=""
+
+    # Restore the terminal on interrupt as well as on the normal exit path.
+    # Without this, Ctrl-C leaves echo disabled and the cursor hidden, and the
+    # user has to type a blind `stty sane` to recover. Re-raise afterwards so
+    # Ctrl-C still aborts the script: `return` from a trap resumes the caller
+    # with status 0, which would silently continue the install.
+    trap 'stty "$old_stty" 2>/dev/null; tput cnorm 2>/dev/null; trap - INT TERM; kill -INT $$' INT TERM
+
     # Disable echoing of input
     stty -echo
     
@@ -201,7 +214,8 @@ tui_multi_select() {
     done
     
     # Restore terminal settings
-    stty $old_stty
+    trap - INT TERM
+    stty "$old_stty"
     
     # Show cursor again
     tput cnorm
@@ -324,6 +338,9 @@ select_modules() {
     local modules_array=("$@")
     local names=()
     local descriptions=()
+    # Localized deliberately: apply.sh and backup.sh both use a variable
+    # named `module` right after calling this.
+    local module name description
     
     # Split module entries into names and descriptions
     for module in "${modules_array[@]}"; do

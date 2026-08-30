@@ -1,111 +1,116 @@
 #!/bin/bash
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# ============================================================
+# Claude Code setup - step dispatcher (Linux)
+#
+# Usage:
+#   sh apply.sh                 # interactive step menu (TTY) / all steps (non-TTY)
+#   sh apply.sh skills          # run a single step
+#   sh apply.sh skills mcp      # run several (always in canonical order)
+#   sh apply.sh all             # run everything
+#   CLAUDE_APPLY_STEPS="skills" sh apply.sh
+#
+# The top-level apply.sh invokes this with no arguments, so argument
+# support is an extra affordance for direct invocation. Every step is
+# independent: updating skills does not require reinstalling the CLI.
+# ============================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 COMMON_DIR="$DOTFILES_DIR/modules/common"
 
-. "$DOTFILES_DIR/lib/utils.sh"
+if [ -f "$DOTFILES_DIR/lib/utils.sh" ]; then
+    . "$DOTFILES_DIR/lib/utils.sh"
+else
+    echo "Error: utils.sh not found at $DOTFILES_DIR/lib/utils.sh" >&2
+    exit 1
+fi
 
 check_linux
 
-print_info "Claude Code CLI Setup (from common)"
-echo "===================================="
+if [ -f "$DOTFILES_DIR/lib/menu.sh" ]; then
+    . "$DOTFILES_DIR/lib/menu.sh"
+else
+    print_error "menu.sh not found at $DOTFILES_DIR/lib/menu.sh"
+    exit 1
+fi
 
-# Verify submodule is initialized
+. "$SCRIPT_DIR/lib.sh"
+
 if [ ! -d "$COMMON_DIR/claude" ]; then
     print_error "Common submodule not initialized."
     print_info "Run: git submodule update --init"
     exit 1
 fi
 
-# Check dependencies
-if ! command_exists node; then
-    print_error "Node.js is not installed. Please run mise module first."
+CLAUDE_DIR="$HOME/.claude"
+
+ALL_STEPS="cli hooks settings skills mcp doctor"
+
+# ------------------------------------------------------------
+# Resolve which steps to run
+# ------------------------------------------------------------
+STEPS="$*"
+[ -z "$STEPS" ] && STEPS="${CLAUDE_APPLY_STEPS:-}"
+
+if [ -z "$STEPS" ]; then
+    if [ -t 0 ]; then
+        # smart_select_items clears the screen, so print the header after it
+        smart_select_items "Select Claude Code setup steps" $ALL_STEPS
+        STEPS="$SELECTED_ITEMS"
+    else
+        STEPS="$ALL_STEPS"
+    fi
+fi
+
+[ "$STEPS" = "all" ] && STEPS="$ALL_STEPS"
+
+if [ -z "$STEPS" ]; then
+    print_warning "No steps selected"
+    exit 0
+fi
+
+for s in $STEPS; do
+    case " $ALL_STEPS " in
+        *" $s "*) ;;
+        *)
+            print_error "Unknown step: $s"
+            print_info "Valid steps: $ALL_STEPS"
+            exit 1
+            ;;
+    esac
+done
+
+# Re-order into canonical order; menu selection order is not meaningful
+RUN=""
+for s in $ALL_STEPS; do
+    case " $STEPS " in
+        *" $s "*) RUN="$RUN $s" ;;
+    esac
+done
+
+print_info "Claude Code Setup"
+echo "======================"
+print_info "Steps:$RUN"
+echo ""
+
+# ------------------------------------------------------------
+# Run each step in a subshell so a step's `exit` cannot abort the
+# module and no variables leak between steps.
+# ------------------------------------------------------------
+FAILED=""
+for s in $RUN; do
+    print_info "--- step: $s ---"
+    if ! ( . "$SCRIPT_DIR/steps/$s.sh" ); then
+        FAILED="$FAILED $s"
+    fi
+    echo ""
+done
+
+if [ -n "$FAILED" ]; then
+    print_error "Failed steps:$FAILED"
     exit 1
 fi
 
-# Install Claude Code CLI
-if confirm "Would you like to install @anthropic-ai/claude-code?"; then
-    print_info "Installing @anthropic-ai/claude-code..."
-    npm install -g @anthropic-ai/claude-code@latest
-
-    if [ $? -eq 0 ]; then
-        print_success "@anthropic-ai/claude-code installed"
-    else
-        print_error "Failed to install @anthropic-ai/claude-code"
-        exit 1
-    fi
-
-    CLAUDE_CODE_DIR="$HOME/.claude"
-    mkdir -p "$CLAUDE_CODE_DIR"
-
-    # Deploy settings.json from common
-    if [ -f "$COMMON_DIR/claude/settings.json" ]; then
-        cp "$COMMON_DIR/claude/settings.json" "$CLAUDE_CODE_DIR/settings.json"
-        print_success "Claude Code settings applied from common"
-    fi
-
-    # Deploy resources from common
-    print_info "Deploying Claude Code resources from common..."
-
-    # Ask if user wants to clean up old files
-    CLEANUP_MODE=false
-    if confirm "Would you like to clean up old files before deploying? (removes all existing files in each resource directory)"; then
-        CLEANUP_MODE=true
-        print_warning "Cleanup mode enabled - old files will be removed"
-    fi
-
-    for resource_type in agents commands skills tools; do
-        resource_dir="$COMMON_DIR/claude/$resource_type"
-
-        if [ -d "$resource_dir" ]; then
-            print_info "Deploying $resource_type..."
-
-            # Clean up if requested
-            if [ "$CLEANUP_MODE" = true ] && [ -d "$CLAUDE_CODE_DIR/$resource_type" ]; then
-                print_warning "Removing old $resource_type..."
-                rm -rf "$CLAUDE_CODE_DIR/$resource_type"
-            fi
-
-            mkdir -p "$CLAUDE_CODE_DIR/$resource_type"
-
-            if cp -r "$resource_dir"/* "$CLAUDE_CODE_DIR/$resource_type/" 2>/dev/null; then
-                # Set execute permissions for tools and skills
-                if [ "$resource_type" = "tools" ] || [ "$resource_type" = "skills" ]; then
-                    find "$CLAUDE_CODE_DIR/$resource_type" -type f \( -name "*.sh" -o -name "*.py" \) -exec chmod +x {} \; 2>/dev/null || true
-                fi
-
-                print_success "$resource_type deployed"
-            else
-                print_warning "No $resource_type files found"
-            fi
-        fi
-    done
-
-    # Deploy hooks from common
-    print_info "Deploying hooks from common..."
-    mkdir -p "$CLAUDE_CODE_DIR/hooks"
-
-    # Copy common hook
-    if [ -f "$COMMON_DIR/claude/hooks/auto-approve-safe-commands.sh" ]; then
-        cp "$COMMON_DIR/claude/hooks/auto-approve-safe-commands.sh" "$CLAUDE_CODE_DIR/hooks/"
-        chmod +x "$CLAUDE_CODE_DIR/hooks/auto-approve-safe-commands.sh"
-        print_success "Hooks deployed"
-    fi
-
-    # Copy Linux-specific hooks if they exist
-    if [ -d "$COMMON_DIR/claude/hooks/platform/linux" ]; then
-        for hook in "$COMMON_DIR/claude/hooks/platform/linux"/*; do
-            if [ -f "$hook" ] && [ "$(basename "$hook")" != ".gitkeep" ]; then
-                cp "$hook" "$CLAUDE_CODE_DIR/hooks/"
-                chmod +x "$CLAUDE_CODE_DIR/hooks/$(basename "$hook")"
-            fi
-        done
-    fi
-
-    print_success "Claude Code CLI setup completed"
-    print_info ""
-    print_info "You can now use: claude"
-else
-    print_info "Claude Code CLI installation skipped"
-fi
+print_success "Claude Code setup completed"
+exit 0

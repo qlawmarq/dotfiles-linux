@@ -8,3 +8,6 @@
 .env_secrets
 */.env_secrets
 **/.env_secrets
+
+# Machine-local Claude Code permissions (absolute paths, not portable)
+.claude/settings.local.json

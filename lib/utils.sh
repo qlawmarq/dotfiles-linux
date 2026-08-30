@@ -60,24 +60,19 @@ confirm() {
 
 # Function to print colored output
 print_info() {
-    echo -e "\033[0;34m[INFO]\033[0m $1"
+    printf '\033[0;34m[INFO]\033[0m %s\n' "$1"
 }
 
 print_success() {
-    echo -e "\033[0;32m[SUCCESS]\033[0m $1"
+    printf '\033[0;32m[SUCCESS]\033[0m %s\n' "$1"
 }
 
 print_warning() {
-    echo -e "\033[0;33m[WARNING]\033[0m $1" >&2
+    printf '\033[0;33m[WARNING]\033[0m %s\n' "$1" >&2
 }
 
 print_error() {
-    echo -e "\033[0;31m[ERROR]\033[0m $1" >&2
-}
-
-# Get script directory
-get_script_dir() {
-    echo "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    printf '\033[0;31m[ERROR]\033[0m %s\n' "$1" >&2
 }
 
 # Check command existence
@@ -85,82 +80,47 @@ command_exists() {
     command -v "$1" &> /dev/null
 }
 
-# Install command if not exists
-ensure_command() {
-    local cmd="$1"
-    local install_cmd="$2"
-    
-    if ! command_exists "$cmd"; then
-        print_info "$cmd is not installed. Installing..."
-        eval "$install_cmd"
-        if [ $? -ne 0 ]; then
-            print_error "Failed to install $cmd"
+# Prompt for a value with a default
+# Usage: get_user_input "Prompt text" "default value" [optional]
+#
+#   - default non-empty : Enter accepts the default
+#   - default empty     : re-prompts until non-empty, unless the third
+#                         argument is "optional", which allows an empty answer
+#   - EOF (no TTY, or Ctrl-D): echoes the default and returns 1 instead of
+#                         looping. Without this guard a non-interactive run
+#                         spins forever.
+#
+# The prompt and any message go to stderr: callers use $( ), which would
+# otherwise capture them into the value instead of showing them.
+get_user_input() {
+    local prompt="$1"
+    local default="$2"
+    local optional="$3"
+    local input
+
+    while true; do
+        if [ -n "$default" ]; then
+            printf '%s [%s]: ' "$prompt" "$default" >&2
+        else
+            printf '%s: ' "$prompt" >&2
+        fi
+
+        if ! IFS= read -r input; then
+            printf '\n' >&2
+            echo "$default"
             return 1
         fi
-        print_success "$cmd installed successfully"
-    else
-        print_info "$cmd is already installed"
-    fi
-    return 0
-}
 
-# Parse JSON and extract value for a key
-# Usage: parse_json "key" "json_file"
-parse_json() {
-    local key="$1"
-    local file="$2"
-    
-    if command_exists "jq"; then
-        jq -r ".$key" "$file" 2>/dev/null
-    elif command_exists "python3"; then
-        python3 -c "import json,sys;obj=json.load(open('$file'));print(obj.get('$key',''))"
-    elif command_exists "python"; then
-        python -c "import json,sys;obj=json.load(open('$file'));print(obj.get('$key',''))"
-    else
-        # Fallback to grep (limited functionality)
-        grep -o "\"$key\": *\"[^\"]*\"" "$file" | sed -E "s/\"$key\": *\"([^\"]*)\"/\1/"
-    fi
-}
-
-# Creates a temporary file with auto cleanup
-create_temp_file() {
-    local tmp_file
-    tmp_file=$(mktemp)
-    
-    # Note: We're removing the trap to avoid issues with multiple traps
-    # User must manually remove temp files
-    
-    echo "$tmp_file"
-}
-
-# Function to check minimum version
-# Usage: check_version "current_ver" "required_ver"
-check_version() {
-    local current="$1"
-    local required="$2"
-    
-    if [[ "$current" == "$required" ]]; then
-        return 0
-    fi
-    
-    local IFS=.
-    local i ver1=($current) ver2=($required)
-    
-    # Fill empty fields with zeros
-    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++)); do
-        ver1[i]=0
-    done
-    
-    for ((i=0; i<${#ver1[@]}; i++)); do
-        if [[ -z ${ver2[i]} ]]; then
-            ver2[i]=0
-        fi
-        if ((10#${ver1[i]} < 10#${ver2[i]})); then
-            return 1
-        fi
-        if ((10#${ver1[i]} > 10#${ver2[i]})); then
+        if [ -n "$input" ]; then
+            echo "$input"
             return 0
         fi
+
+        if [ -n "$default" ] || [ "$optional" = "optional" ]; then
+            echo "$default"
+            return 0
+        fi
+
+        echo "This field cannot be empty. Please try again." >&2
     done
-    return 0
 }
