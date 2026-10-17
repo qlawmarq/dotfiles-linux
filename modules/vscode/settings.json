@@ -1,26 +1,48 @@
 {
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.formatOnSave": true,
-  "javascript.updateImportsOnFileMove.enabled": "always",
-  "launch": {
-    "configurations": [],
-    "compounds": []
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "updateImportsOnFileMove.enabled": "always"
   },
-  "notebook.lineNumbers": "on",
-  "typescript.updateImportsOnFileMove.enabled": "always",
-  "svelte.enable-ts-plugin": true,
-  "[go]": {
-    "editor.defaultFormatter": "golang.go",
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "updateImportsOnFileMove.enabled": "always"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true
   },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[go]": {
+    "editor.defaultFormatter": "golang.go",
+    "editor.formatOnSave": true,
+    "toolsManagement.autoUpdate": true
+  },
   "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
       "source.fixAll": "explicit"
     }
   },
-  "go.toolsManagement.autoUpdate": true,
+  "editor.lineNumbers": "on",
+  "editor.renderControlCharacters": true,
+  "editor.renderWhitespace": "all",
+  "notebook.lineNumbers": "on",
+  "search.showLineNumbers": true,
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
   "github.copilot.nextEditSuggestions.enabled": true,
   "terminal.integrated.scrollback": 1000000,
-  "files.maxMemoryForLargeFilesMB": 8192
+  "files.maxMemoryForLargeFilesMB": 8192,
+  "github.copilot.enable": {
+    "*": true,
+    "plaintext": false,
+    "markdown": true,
+    "scminput": false
+  }
 }
