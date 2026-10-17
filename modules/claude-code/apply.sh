@@ -4,11 +4,11 @@
 # Claude Code setup - step dispatcher (Linux)
 #
 # Usage:
-#   sh apply.sh                 # interactive step menu (TTY) / all steps (non-TTY)
-#   sh apply.sh skills          # run a single step
-#   sh apply.sh skills mcp      # run several (always in canonical order)
-#   sh apply.sh all             # run everything
-#   CLAUDE_APPLY_STEPS="skills" sh apply.sh
+#   bash apply.sh                 # interactive step menu (TTY) / all steps (non-TTY)
+#   bash apply.sh skills          # run a single step
+#   bash apply.sh skills mcp      # run several (always in canonical order)
+#   bash apply.sh all             # run everything
+#   CLAUDE_APPLY_STEPS="skills" bash apply.sh
 #
 # The top-level apply.sh invokes this with no arguments, so argument
 # support is an extra affordance for direct invocation. Every step is
@@ -45,7 +45,7 @@ fi
 
 CLAUDE_DIR="$HOME/.claude"
 
-ALL_STEPS="cli hooks settings skills mcp doctor"
+ALL_STEPS="cli settings skills mcp doctor"
 
 # ------------------------------------------------------------
 # Resolve which steps to run

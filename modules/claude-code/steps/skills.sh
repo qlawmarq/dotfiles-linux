@@ -5,9 +5,10 @@
 # take effect immediately and stale skills can be pruned by removing the
 # link alone - no rm -rf of the skills directory.
 #
-# ~/.agents/skills (Codex CLI / Gemini CLI) defaults to copy because
-# their symlink support is unverified. Set AGENTS_SKILLS_MODE=symlink
-# to opt in once confirmed.
+# ~/.agents/skills (Codex CLI / Gemini CLI) is symlinked too. Both CLIs
+# follow symlinked skill directories (verified 2026-09-28: Codex CLI
+# 0.151.0, Gemini CLI 0.28.0; see modules/claude-code/AGENTS.md). Set
+# AGENTS_SKILLS_MODE=copy to fall back to the previous copy deployment.
 
 # Surface accidental edits early. Because the skills below are symlinks
 # into the submodule, anything that writes to ~/.claude/skills/<name>/
@@ -28,7 +29,7 @@ fi
 
 CLAUDE_SKILLS="$CLAUDE_DIR/skills"
 AGENTS_SKILLS="$HOME/.agents/skills"
-AGENTS_SKILLS_MODE="${AGENTS_SKILLS_MODE:-copy}"
+AGENTS_SKILLS_MODE="${AGENTS_SKILLS_MODE:-symlink}"
 
 # Migration target must sit OUTSIDE the skills directory, or Claude Code
 # would scan the backup and register duplicate skills.
@@ -46,6 +47,23 @@ print_success "Claude Code skills linked into $CLAUDE_SKILLS"
 
 # --- ~/.agents/skills : cross-agent skills only ---
 if [ -d "$CROSS_AGENT" ]; then
+    # Switching from copy to symlink: the copies listed in the manifest were
+    # written by this step from the submodule, so delete them instead of
+    # migrating them like foreign directories. Copies of skills that were
+    # since removed from the submodule are covered too, as the manifest
+    # names every copy the last copy-mode run left behind.
+    AGENTS_MANIFEST="$AGENTS_SKILLS/.dotfiles-manifest"
+    if [ "$AGENTS_SKILLS_MODE" = "symlink" ] && [ -f "$AGENTS_MANIFEST" ]; then
+        while IFS= read -r _n; do
+            [ -n "$_n" ] || continue
+            if [ -d "$AGENTS_SKILLS/$_n" ] && [ ! -L "$AGENTS_SKILLS/$_n" ]; then
+                rm -rf "${AGENTS_SKILLS:?}/$_n"
+                print_info "Removed skill copy (now symlinked): $_n"
+            fi
+        done < "$AGENTS_MANIFEST"
+        rm -f "$AGENTS_MANIFEST"
+    fi
+
     DEPLOYED_NAMES=""
     deploy_skills "$CROSS_AGENT" "$AGENTS_SKILLS" "$AGENTS_SKILLS_MODE"
     if [ "$AGENTS_SKILLS_MODE" = "symlink" ]; then

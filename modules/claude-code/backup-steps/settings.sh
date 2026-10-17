@@ -1,8 +1,9 @@
 # Backup: live settings.json -> modules/common/claude/settings.json
 #
 # Allowlisted, not a verbatim copy: the live file carries machine-local
-# UI state (notification toggles, per-model effort levels) that must not
-# enter a submodule shared with the Linux dotfiles repository.
+# UI state (per-model effort levels, ...) that must not enter a submodule
+# shared with the Linux dotfiles repository. The notification keys are
+# listed so a choice made in /config can be promoted on purpose.
 
 need_cmd jq "settings backup" || return 0
 
@@ -20,7 +21,9 @@ if ! confirm "Back up Claude Code settings into the common submodule?"; then
 fi
 
 TMP=$(mktemp)
-if jq '{"$schema": .["$schema"], permissions, model, hooks, statusLine, env}
+if jq '{"$schema": .["$schema"], permissions, model, tui, hooks, statusLine, env,
+        cleanupPeriodDays, preferredNotifChannel,
+        inputNeededNotifEnabled, agentPushNotifEnabled}
        | with_entries(select(.value != null))' "$LIVE_SETTINGS" > "$TMP" \
    && [ -s "$TMP" ] && jq -e . "$TMP" >/dev/null; then
     mv "$TMP" "$REPO_SETTINGS"

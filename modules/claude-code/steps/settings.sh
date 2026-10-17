@@ -29,38 +29,11 @@ BACKUP_DIR="$CLAUDE_DIR/.dotfiles-backups"
 mkdir -p "$BACKUP_DIR"
 cp "$LIVE_SETTINGS" "$BACKUP_DIR/settings-$(date +%Y%m%d%H%M%S).json"
 
-# Never wire a hook whose script is not on disk: the shared settings file
-# is used by both platforms, and a command that does not exist fails on
-# every matching tool call. The `hooks` step runs before this one, so what
-# is on disk now is what this machine actually got.
-MISSING_HOOKS="[]"
-HOOK_CMDS=$(jq -r '(.hooks // {}) | to_entries[] | .value[]? | .hooks[]?
-                   | select(.type == "command") | .command' "$REPO_SETTINGS" 2>/dev/null | sort -u)
-OLDIFS=$IFS
-IFS='
-'
-for cmd in $HOOK_CMDS; do
-    resolved=$(printf '%s' "$cmd" | sed "s|\$HOME|$HOME|g")
-    script=${resolved%% *}
-    if [ ! -e "$script" ]; then
-        MISSING_HOOKS=$(printf '%s' "$MISSING_HOOKS" | jq -c --arg c "$cmd" '. + [$c]')
-        print_warning "Hook script not present, dropping its wiring: $script"
-    fi
-done
-IFS=$OLDIFS
-
 TMP=$(mktemp)
-if jq -n --slurpfile live "$LIVE_SETTINGS" --slurpfile repo "$REPO_SETTINGS" \
-        --argjson missing "$MISSING_HOOKS" '
-      def prune_missing:
-          map_values(
-              map(.hooks |= map(select(.command as $c | ($missing | index($c)) | not)))
-              | map(select((.hooks | length) > 0))
-          )
-          | with_entries(select((.value | length) > 0));
+if jq -n --slurpfile live "$LIVE_SETTINGS" --slurpfile repo "$REPO_SETTINGS" '
       ($live[0] // {}) * ($repo[0] // {})
       | .permissions = ($repo[0].permissions // {})
-      | .hooks       = (($repo[0].hooks // {}) | prune_missing)
+      | .hooks       = ($repo[0].hooks // {})
    ' > "$TMP" && [ -s "$TMP" ]; then
     mv "$TMP" "$LIVE_SETTINGS"
     print_success "settings.json merged (permissions/hooks from repo, local keys preserved)"
@@ -70,3 +43,15 @@ else
     print_error "Failed to merge settings.json (left unchanged)"
     return 1
 fi
+
+# De-provision the retired notify hook. Notifications now come from the
+# built-in preferredNotifChannel setting, and the merge above has already
+# dropped the hook wiring. Idempotent - safe to delete this block once
+# every machine has run it.
+for f in notify.sh notify-config auto-approve-safe-commands.sh; do
+    if [ -e "$CLAUDE_DIR/hooks/$f" ]; then
+        rm -f "$CLAUDE_DIR/hooks/$f"
+        print_info "Removed retired hook file: $f"
+    fi
+done
+rmdir "$CLAUDE_DIR/hooks" 2>/dev/null || true
