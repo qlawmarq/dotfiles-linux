@@ -5,9 +5,15 @@
 # ====================
 
 # Simple Y/N selection for each item in a list
-# Usage: yn_select_items "Header message" "item1" "item2" ...
+# Usage: yn_select_items [--single] "Header message" "item1" "item2" ...
+#   --single: stop at the first item answered "y" (at most one selected)
 # Returns: Space-separated list of selected items in $SELECTED_ITEMS
 yn_select_items() {
+    local single=0
+    if [ "$1" = "--single" ]; then
+        single=1
+        shift
+    fi
     local header="$1"
     shift
     local items=("$@")
@@ -24,6 +30,7 @@ yn_select_items() {
             [Yy]* ) 
                 SELECTED_ITEMS="$SELECTED_ITEMS $item"
                 echo "✓ Selected: $item"
+                [ $single -eq 1 ] && break
                 ;;
             * ) 
                 echo "✗ Skipped: $item"
@@ -42,13 +49,26 @@ yn_select_items() {
 }
 
 # Advanced multi-select using tput for arrow keys and space selection
-# Usage: tui_multi_select "Header message" "item1" "item2" ...
+# Usage: tui_multi_select [--single] "Header message" "item1" "item2" ...
+#   --single: SPACE selects one item and clears the others (at most one selected)
 # Returns: Space-separated list of selected items in $SELECTED_ITEMS
 tui_multi_select() {
+    local single=0
+    local hint="SPACE to select/deselect"
+    if [ "$1" = "--single" ]; then
+        single=1
+        hint="SPACE to select one"
+        shift
+    fi
+
     # Check if required commands exist
     if ! command_exists "tput" || ! command_exists "stty"; then
         print_warning "tput or stty not found, falling back to simple selection"
-        yn_select_items "$@"
+        if [ $single -eq 1 ]; then
+            yn_select_items --single "$@"
+        else
+            yn_select_items "$@"
+        fi
         return
     fi
     
@@ -92,7 +112,7 @@ tui_multi_select() {
     # Clear screen and print header
     clear
     echo "$header"
-    echo "Use ↑/↓ arrows to navigate, SPACE to select/deselect, ENTER to confirm"
+    echo "Use ↑/↓ arrows to navigate, $hint, ENTER to confirm"
     echo "----------------------------------------"
     
     # Create more space for messages
@@ -110,7 +130,7 @@ tui_multi_select() {
         
         # Print header
         echo "$header"
-        echo "Use ↑/↓ arrows to navigate, SPACE to select/deselect, ENTER to confirm"
+        echo "Use ↑/↓ arrows to navigate, $hint, ENTER to confirm"
         echo "----------------------------------------"
         
         local i=0
@@ -153,7 +173,7 @@ tui_multi_select() {
         
         # Print controls hint at the bottom
         tput cup $((3 + ${#items[@]} + 1)) 0
-        echo "Press SPACE to select/deselect, ENTER to confirm"
+        echo "Press $hint, ENTER to confirm"
     }
     
     # Initial menu print
@@ -184,6 +204,11 @@ tui_multi_select() {
         elif [ "$key" = ' ' ]; then # Space key
             # Toggle selection
             if [ ${selected[$pos]} -eq 0 ]; then
+                if [ $single -eq 1 ]; then
+                    for i in $(seq 0 $((${#items[@]}-1))); do
+                        selected[$i]=0
+                    done
+                fi
                 selected[$pos]=1
                 
                 # Visual feedback for selection
@@ -246,7 +271,7 @@ tui_multi_select() {
 }
 
 # Smart menu that tries TUI first, falls back to Y/N
-# Usage: smart_select_items "Header message" "item1" "item2" ...
+# Usage: smart_select_items [--single] "Header message" "item1" "item2" ...
 # Returns: Space-separated list of selected items in $SELECTED_ITEMS
 smart_select_items() {
     # Check if terminal supports advanced features

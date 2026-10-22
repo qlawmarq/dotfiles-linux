@@ -22,6 +22,34 @@ CLAUDE_APPLY_STEPS=skills bash modules/claude-code/apply.sh
 A step whose prerequisites are missing (no `jq`, no `claude`, no resolvable `npx`)
 logs a warning and skips, rather than failing the module.
 
+### CLI install methods
+
+The `cli` step lives in `modules/common/claude/install/` and is shared with the sibling
+dotfiles repository; `steps/cli.sh` only sources it. It reports how Claude Code is
+installed (`Installed via: <method>` plus every `claude` on PATH with its version), asks
+which method to use (selecting none skips), installs or updates with it, and offers to remove installs made with
+other methods, since the official troubleshooting guide says to keep only one. Without a
+terminal it only reports; `CLAUDE_INSTALL_METHOD=<id>` picks a method without asking.
+
+- Methods: `native` (official installer, recommended), `brew`, `npm`, `apt`, `dnf`. A
+  method is offered when its command exists (`curl`, `brew`, `npm`, `apt`, `dnf`) or when
+  it is already installed; there is no OS check. All of them use the latest channel.
+- Detection: native is `~/.local/bin/claude`, brew is `brew list --cask` for
+  `claude-code@latest` or `claude-code`, npm is `npm ls -g @anthropic-ai/claude-code`
+  (all three from the official guide); apt (`dpkg-query`) and dnf (`rpm -q`) have no
+  official detection command, so those checks are ours. `installMethod` in
+  `~/.claude.json` is not used: it can keep a stale value (`global` was seen on a brew
+  install).
+- npm installs into the active Node.js version. Upgrading node with mise leaves the
+  package behind in the old version, where it is neither detected nor on PATH; this is
+  what broke `claude` after a node upgrade.
+- apt and dnf need sudo, and dnf asks to confirm the signing key, so run them from a
+  terminal.
+- To add a method, write `methods/<id>.sh` with the `cim_<id>_*` functions listed in
+  `install/lib.sh` and append `<id>` to `CLAUDE_INSTALL_METHODS`. The code relies on this
+  repository's `lib/utils.sh` (`print_*`, `confirm`, `command_exists`) and `lib/menu.sh`
+  (`smart_select_items --single`, the module menu in single-choice mode).
+
 ### Skills are symlinked
 
 `~/.claude/skills/<name>` are symlinks into `modules/common`, which Claude Code follows.

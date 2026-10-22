@@ -38,6 +38,10 @@ fi
 
 print_info "mise version: $($MISE_BIN --version)"
 
+# Remove the versions `mise upgrade` replaced on the next mise command
+# instead of after the default 24h grace period (upgrade.prune_after)
+$MISE_BIN settings set upgrade.prune_after 0s
+
 # Install Go
 if confirm "Would you like to install Go?"; then
     print_info "Installing Go..."
